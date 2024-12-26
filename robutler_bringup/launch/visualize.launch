@@ -1,0 +1,3 @@
+<launch>
+    <node name="rviz" pkg="rviz" type="rviz" args="--display-config $(find robutler_bringup)/config/visualize.rviz" required="false"/>
+</launch>
