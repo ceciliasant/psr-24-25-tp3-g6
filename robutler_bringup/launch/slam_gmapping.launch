@@ -1,0 +1,3 @@
+<launch>
+    <node name="slam_gmapping" pkg="gmapping" type="slam_gmapping" args="load_map:=false"/>
+</launch>
