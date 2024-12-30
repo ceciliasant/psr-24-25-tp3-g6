@@ -1,5 +1,5 @@
 <launch>
-    <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+    <arg name="model" default="waffle_pi" doc="model type [burger, waffle, waffle_pi]"/>
     <arg name="x_pos" default="-3.0"/>
     <arg name="y_pos" default="1.0"/>
     <arg name="z_pos" default="0.0"/>
@@ -13,11 +13,12 @@
         <arg name="z_pos" value="$(arg z_pos)"/>
     </include>
 
-    <node pkg="map_server" type="map_server" name="map_server" output="screen">
-        <param name="map_file" value="$(find robutler_bringup)/maps/small_house_map.yaml" />
-    </node>
+    <!-- <node pkg="map_server" type="map_server" name="map_server" output="screen"> -->
+        <!-- <param name="map_file" value="$(find robutler_bringup)/maps/small_house_map.yaml" /> -->
+        <!-- <param name="map_file" value="$(find aws_robomaker_small_house_world)/maps/turtlebot3_waffle_pi/map.yaml" /> -->
+    <!-- </node> -->
 
-    <!-- <node name="map_server" pkg="map_server" type="map_server" args="$(find robutler_bringup)/maps/small_house_map.yaml" /> -->
+    <node name="map_server" pkg="map_server" type="map_server" args="$(find robutler_bringup)/maps/small_house_map.yaml" />
 
     <!-- <include file="$(find robutler_bringup)/launch/slam_gmapping.launch"/> -->
 
