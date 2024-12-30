@@ -13,18 +13,22 @@
         <arg name="z_pos" value="$(arg z_pos)"/>
     </include>
 
-    <!-- <node pkg="map_server" type="map_server" name="map_server" output="screen"> -->
-        <!-- <param name="map_file" value="$(find robutler_bringup)/maps/small_house_map.yaml" /> -->
-        <!-- <param name="map_file" value="$(find aws_robomaker_small_house_world)/maps/turtlebot3_waffle_pi/map.yaml" /> -->
-    <!-- </node> -->
-
     <node name="map_server" pkg="map_server" type="map_server" args="$(find robutler_bringup)/maps/small_house_map.yaml" />
 
-    <!-- <include file="$(find robutler_bringup)/launch/slam_gmapping.launch"/> -->
+    <node name="amcl" pkg="amcl" type="amcl" output="screen">
+        <param name="map_topic" value="/map" />
+        <param name="odom_frame_id" value="odom" />
+        <param name="base_frame_id" value="base_link" />
+        <param name="global_costmap/robot_base_frame" value="base_footprint" />
+        <param name="local_costmap/robot_base_frame" value="base_footprint" />
+    </node>
+
+    <node name="base_link_to_scan" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 base_link base_scan 100" />
 
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher">
         <param name="publish_frequency" type="double" value="50.0" />
     </node>
 
     <include file="$(find robutler_bringup)/launch/visualize.launch" />
+
 </launch>
