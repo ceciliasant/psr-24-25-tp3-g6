@@ -25,8 +25,11 @@
         <remap from="odom" to="/odom"/>
     </node>
 
-    <node pkg="robutler_navigation" type="main.py" name="semantic_navigator" output="screen">
+    <node pkg="robutler_navigation" type="semantic.py" name="semantic_navigator" output="screen">
         <param name="locations_file" value="$(find robutler_bringup)/config/semantic_locations.yaml"/>
+    </node>
+
+    <node pkg="robutler_navigation" type="coordinate.py" name="common_navigator" output="screen">
     </node>
     
 </launch>
