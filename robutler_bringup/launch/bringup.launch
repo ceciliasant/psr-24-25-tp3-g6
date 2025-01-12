@@ -3,7 +3,7 @@
     <arg name="x_pos" default="-3.0"/>
     <arg name="y_pos" default="1.0"/>
     <arg name="z_pos" default="0.0"/>
-    <arg name="enable_teleop" default="true" doc="Enable/disable teleop keyboard control"/>
+    <arg name="enable_voice" default="false" doc="Enable/disable voice control"/>
 
 
     <include file="$(find robutler_bringup)/launch/gazebo.launch" />
@@ -15,7 +15,9 @@
         <arg name="z_pos" value="$(arg z_pos)"/>
     </include>
 
-    <include file="$(find robutler_bringup)/launch/navigation.launch"/>
+    <include file="$(find robutler_bringup)/launch/navigation.launch">
+        <arg name="enable_voice" value="$(arg enable_voice)"/>
+    </include>
 
     <node name="map_server" pkg="map_server" type="map_server" args="$(find robutler_bringup)/maps/map.yaml" />
 

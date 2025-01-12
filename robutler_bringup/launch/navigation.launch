@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-
+    <arg name="enable_voice" default="false" />
     
     <node pkg="turtlebot3_teleop" type="turtlebot3_teleop_key" name="turtlebot3_teleop_keyboard" output="screen">
         <remap from="cmd_vel" to="/cmd_vel"/>
@@ -31,5 +31,11 @@
 
     <node pkg="robutler_navigation" type="coordinate.py" name="common_navigator" output="screen">
     </node>
+
+    <group if="$(arg enable_node)">
+        <node pkg="robutler_speech" type="main.py" name="speech_recognition" output="screen">
+            <env name="PYTHONWARNINGS" value="ignore:ResourceWarning"/>
+        </node>
+    </group>
     
 </launch>
