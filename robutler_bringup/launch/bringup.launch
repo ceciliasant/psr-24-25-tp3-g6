@@ -70,7 +70,6 @@
 
     <include file="$(find robutler_bringup)/launch/visualize.launch" />
 
-    <!-- <node name="spawn_object" pkg="psr_24_25_tp3_g6" type="spawn_object.py" output="screen">
-        <param name="use_sim_time" value="true" />
-    </node> -->
+    <include file="$(find robutler_perception)/launch/detection.launch" />
+
 </launch>

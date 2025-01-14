@@ -34,9 +34,15 @@ roslaunch robutler_bringup bringup.launch
 
 ## Requisitos
 ```bash
-pip3 install SpeechRecognition
-sudo apt-get install python3-audio
-sudo apt-get install alsa-utils libasound2 libasound2-dev libjack-jackd2-dev
+SpeechRecognition
+python3-audio
+alsa-utils 
+libasound2 
+libasound2-dev 
+libjack-jackd2-dev
+python3-opencv
+cv_bridge
+
 ```
 
 ## Controlo do robô
