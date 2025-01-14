@@ -1,8 +1,5 @@
 # Trabalho 3 - Robutler
 
-Miguel Riem Oliveira <mriem@ua.pt>
-Eurico Pedrosa <efp@ua.pt>
-
 ## Sumário
 
 Pretende-se desenvolver um sistema robótico que funcione como um mordomo.
@@ -10,76 +7,95 @@ O Robô deve ser capaz de realizar variadas missões de apoio habitualmente real
 
 O robô deve ter desenvolvidas várias funcionalidades que suportem a operacionalização destas missões, tais como a perceção de objetos e a movimentação no cenário.
 
+## Executando o Sistema
+
+### Configuração Inicial do Workspace
+1. Crie o workspace do Catkin:
+    ```bash
+    mkdir -p ~/catkin_ws/src
+    cd ~/catkin_ws/src
+    ```
+2. Clone o repositório:
+    ```bash
+    git clone <url-do-repositorio>
+    ```
+3. Compile o workspace:
+    ```bash
+    cd ~/catkin_ws
+    catkin_make
+    source devel/setup.bash
+    ```
+
+### Iniciar o Sistema
+Para iniciar o robô no cenário Gazebo, use:  
+```bash
+roslaunch robutler_bringup bringup.launch
+```
+
+## Requisitos
+```bash
+pip3 install SpeechRecognition
+sudo apt-get install python3-audio
+sudo apt-get install alsa-utils libasound2 libasound2-dev libjack-jackd2-dev
+```
+
+## Controlo do robô
+
+### Navegação Semântica
+```bash
+rostopic pub /semantic_goal std_msgs/String "data: 'kitchen'"
+```
+
+### Navegação por Coordenadas
+```bash
+rostopic pub /move_to_coord std_msgs/String "data: '1.0,2.0'"
+```
+
+### Controle por Voz
+Ative o controle por voz ao inicializar o robô:
+```bash
+roslaunch robutler_bringup bringup.launch enable_voice:=true
+```
+
 ## Cenário de testes
 
 O cenário de testes é chamado **AWS small house**, e é um apartamento T2 simulado em Gazebo.
 
-O pacote ROS **aws_robotmaker_small_house_world**  está incluído no github da UC.
-Para lançar o cenário pode utilizar o seguinte comando:
-
-    roslaunch aws_robotmaker_small_house_world view_small_house.launch
-
-O que deverá mostrar um ambiente como o da imagem seguinte:
-
-[.text-center]
-.PSR Apartment no Gazebo.
-image::docs/aws_house.png[]
-
 
 ## Objetivos
 
-A avaliação será feita em função da apresentação do grupo no exame de época normal ou de recurso. Os alunos deverão preparar a apresentação no sentido de cobrir o mais possível os objetivos / funcionalidades abaixo listadas.
-
 ### Configuração do robô
 
-O robô deve ser baseado num turtlebot waffle pi. No entanto, esta plataforma terá de ser modificada de modo a que seja possível ao robô ter informação adequada para cumprir as suas missões. Em particular poderá ser necessário alterar / acrescentar sensores bem como o seu posicionamento.
+Plataforma Turtlebot Waffle Pi.
 
 ### Mapeamento do Cenário
 
-O cenário deverá ser mapeado com SLAM, e esse mapa offline utilizado como suporte à localização e navegação autónoma.
-
-[.text-center]
-.SLAM.
-image::docs/slam.png[]
+O cenário foi mapeado com SLAM, e utilizado como suporte à localização e navegação autónoma.
 
 ### Movimentação do robô pelo apartamento
 
-Deverá ser possível movimentar o robô pelo apartamento de várias formas distintas:
+É possível movimentar o robô pelo apartamento de várias formas distintas:
 
-    - Por condução manual com teleop (pode ser útil criar um teleop com interface melhorado);
-    - Por condução autónoma para um alvo expresso em coordenadas X,Y;
-    - Por condução autónoma para um alvo expresso com informação semântica, e.g. "vai para a cozinha";
-    - Outras formas.
+    - Manual: Controle via teleop (ex.: controle aprimorado com uma interface personalizada).
+    - Coordenadas: Navegação para um alvo definido por X e Y.
+    - Semântica: Navegação para locais pré-definidos, como "cozinha" ou "sala".
+    - Voz: Navegação para alvos a partir de comandos de voz.
 
 ### Perceção
 
-A perceção pode utilizar os sensores que se considerem mais adequados. O Objetivo é que o robô seja capaz de identificar vários objetos, pessoas ou locais em função dos dados adquiridos pelo sensor.
+O robô deve identificar:
 
-A perceção base pode ser baseada em reconhecimento de cor para encontrar objetos de cor única, como é o caso das esferas violeta mostradas abaixo.
-
-[.text-center]
-.Deteção de objetos simples.
-image::docs/object_detection.png[]
-
-Podem ser incluídos objetos mais desafiantes como um portátil ou uma garrafa:
-
-[.text-center]
-.Deteção de um portátil.
-image::docs/laptop.png[]
-
-[.text-center]
-.Deteção de uma garrafa.
-image::docs/bottle.png[]
-
-Finalmente podem também ser detetadas pessoas pelo robô, como por exemplo:
-
-[.text-center]
-.Deteção de uma pessoa.
-image::docs/person.png[]
+    - Objetos (ex.: esferas violeta, laptops, garrafas).
+    - Pessoas.
+    - Locais específicos, utilizando dados dos sensores.
+    Reconhecimentos básicos podem ser baseados em cores ou sensores avançados para objetos mais complexos.
 
 ### Spawn de objetos na casa
 
-Pretende-se criar uma funcionalidade que consiga adicionar objetos à casa em posições não conhecidas pelo robô. Para isso é utilizado um serviço disponibilizado pelo gazebo. O script deverá permitir usar argumentos para definir o que será criado e em que divisão do apartamento, ou então deve sortear um objeto e uma de entre várias localizações pré-configuradas.
+Implementamos um script para adicionar objetos no cenário Gazebo:
+
+    - Argumentos devem definir o objeto e divisão.
+    - Ou gere aleatoriamente o objeto e a posição a partir de locais predefinidos.
 
 ### Missões Passivas
 
