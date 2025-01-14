@@ -19,7 +19,7 @@
         <arg name="enable_voice" value="$(arg enable_voice)"/>
     </include>
 
-    <node name="map_server" pkg="map_server" type="map_server" args="$(find robutler_bringup)/maps/map.yaml" />
+    <node name="map_server" pkg="map_server" type="map_server" args="$(find robutler_bringup)/maps/small_house_map.yaml" />
 
     <node pkg="amcl" type="amcl" name="amcl">
 
@@ -68,4 +68,7 @@
 
     <include file="$(find robutler_bringup)/launch/visualize.launch" />
 
+    <!-- <node name="spawn_object" pkg="psr_24_25_tp3_g6" type="spawn_object.py" output="screen">
+        <param name="use_sim_time" value="true" />
+    </node> -->
 </launch>

@@ -32,7 +32,7 @@
     <node pkg="robutler_navigation" type="coordinate.py" name="common_navigator" output="screen">
     </node>
 
-    <group if="$(arg enable_node)">
+    <group if="$(arg enable_voice)">
         <node pkg="robutler_speech" type="main.py" name="speech_recognition" output="screen">
             <env name="PYTHONWARNINGS" value="ignore:ResourceWarning"/>
         </node>
