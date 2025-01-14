@@ -1,4 +1,4 @@
-image: /home/cecilia/catkin_ws/src/psr-24-25-tp3-g6/robutler_bringup/maps/small_house_map.pgm
+image: ./small_house_map.pgm
 resolution: 0.050000
 origin: [-100.000000, -100.000000, 0.000000]
 negate: 0

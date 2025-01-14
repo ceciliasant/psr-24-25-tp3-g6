@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <node pkg="robutler_ui" type="robutler_ui.py" name="robutler_ui" output="screen">
+        <param name="locations_file" value="$(find robutler_bringup)/config/semantic_locations.yaml"/>
+    </node>
+</launch>

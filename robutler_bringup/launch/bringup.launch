@@ -66,6 +66,8 @@
         <param name="publish_frequency" type="double" value="50.0" />
     </node>
 
+    <include file="$(find robutler_bringup)/launch/ui.launch" />
+
     <include file="$(find robutler_bringup)/launch/visualize.launch" />
 
     <!-- <node name="spawn_object" pkg="psr_24_25_tp3_g6" type="spawn_object.py" output="screen">
