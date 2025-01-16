@@ -4,6 +4,7 @@ import rospy
 import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from std_msgs.msg import String
+from robutler_navigation.msg import CoordinateNavigationAction, CoordinateNavigationResult, CoordinateNavigationFeedback
 import tf2_ros
 from tf2_geometry_msgs import PoseStamped
 from tf.transformations import quaternion_from_euler
@@ -16,14 +17,21 @@ class CommonNavigator:
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
         
-        self.move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        # Create the action server
+        self.action_server = actionlib.SimpleActionServer(
+            'coordinate_navigation',  # Action name
+            CoordinateNavigationAction,  # Custom action
+            execute_cb=self.execute_goal,  # The callback to handle incoming goals
+            auto_start=False
+        )
+        
         rospy.loginfo("Waiting for move_base action server...")
+        self.move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         self.move_base_client.wait_for_server()
         rospy.loginfo("Connected to move_base action server")
 
-        self.goal_sub = rospy.Subscriber('move_to_coord', String, self.goal_callback)
-        
         rospy.loginfo("Common navigator initialized")
+        self.action_server.start()
 
     def create_pose_stamped(self, x, y, yaw=0.0):
         """Create a PoseStamped message"""
@@ -68,20 +76,31 @@ class CommonNavigator:
             rospy.logwarn(f"TF2 error: {e}")
             return False
 
-    def goal_callback(self, msg):
-        """Handle coordinate goals in format 'x,y' or 'x,y,yaw'"""
-        try:
-            # Parse coordinates
-            coords = [float(x) for x in msg.data.split(',')]
-            if len(coords) >= 2:
-                x, y = coords[0], coords[1]
-                yaw = coords[2] if len(coords) > 2 else 0.0
-                self.navigate_to(x, y, yaw)
-            else:
-                rospy.logwarn("Invalid coordinates format. Use 'x,y' or 'x,y,yaw'")
-        except ValueError as e:
-            rospy.logwarn(f"Invalid coordinate format: {e}")
+    def execute_goal(self, goal):
+        """Callback function to handle incoming goals"""
+        x = goal.x
+        y = goal.y
+        
+        rospy.loginfo(f"Received goal: x={x}, y={y}")
+        
+        feedback = CoordinateNavigationFeedback()
+        result = CoordinateNavigationResult()
+        
+        # Simulate navigation (in a real-world scenario, this would be where you invoke your `navigate_to`)
+        success = self.navigate_to(x, y)
 
+        if success:
+            result.success = True
+            result.message = "Successfully reached target coordinates"
+            feedback.current_location = f"Currently at x={x}, y={y}"
+            self.action_server.publish_feedback(feedback)
+            self.action_server.set_succeeded(result)
+        else:
+            result.success = False
+            result.message = "Failed to reach target coordinates"
+            feedback.current_location = f"Failed to reach x={x}, y={y}"
+            self.action_server.publish_feedback(feedback)
+            self.action_server.set_aborted(result)
 
 if __name__ == '__main__':
     try:

@@ -1,11 +1,30 @@
 #!/usr/bin/env python3
 
 import sys
+import actionlib
 import yaml
 import rospy
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QLabel, QLineEdit, QGroupBox)
 from std_msgs.msg import String
 from spawn.spawner import spawn_object
+from robutler_navigation.msg import SemanticNavigationAction, SemanticNavigationGoal, CoordinateNavigationGoal, CoordinateNavigationAction
+
+
+def done_callback(state, result):
+            """Callback for when the action is done."""
+            if result.success:
+                rospy.loginfo(f"Successfully reached the location. Message: {result.message}")
+            else:
+                rospy.logwarn(f"Failed to reach the location. Message: {result.message}")
+
+def active_callback():
+    """Callback for when the goal is active and being processed."""
+    rospy.loginfo("Action goal is now active!")
+
+def feedback_callback(feedback):
+    """Callback for receiving feedback from the action server."""
+    rospy.loginfo(f"Feedback: {feedback.current_location}")
+
 
 class RobutlerUI(QMainWindow):
     def __init__(self):
@@ -14,6 +33,12 @@ class RobutlerUI(QMainWindow):
         self.setGeometry(100, 100, 600, 400)
         
         rospy.init_node('robutler_ui', anonymous=True)
+
+        self.semantic_client = actionlib.SimpleActionClient('semantic_navigation', SemanticNavigationAction)
+        self.semantic_client.wait_for_server()
+
+        self.coordinate_client = actionlib.SimpleActionClient('coordinate_navigation', CoordinateNavigationAction)
+        self.coordinate_client.wait_for_server()
         
         self.locations_file = rospy.get_param('~locations_file', '')
         
@@ -117,13 +142,18 @@ class RobutlerUI(QMainWindow):
         layout.addWidget(spawn_group)
 
     def send_semantic_goal(self):
-        goal = self.semantic_combo.currentText()
-        self.semantic_pub.publish(String(goal))
-        rospy.loginfo(f"Sent semantic goal: {goal}")
+        loc = self.semantic_combo.currentText()
+        goal = SemanticNavigationGoal()
+        goal.location_name = self.semantic_combo.currentText()
+        rospy.loginfo(f"Sending goal to navigate to {loc}...")
+        self.semantic_client.send_goal(goal, done_cb=done_callback, active_cb=active_callback, feedback_cb=feedback_callback)
 
     def send_coordinates(self):
-        coords = self.coord_input.text()
-        self.coord_pub.publish(String(coords))
+        coords = [float(val) for val in self.coord_input.text().split(',')]
+        goal = CoordinateNavigationGoal()
+        goal.x = coords[0]
+        goal.y = coords[1]
+        self.coordinate_client.send_goal(goal, done_cb=done_callback, active_cb=active_callback, feedback_cb=feedback_callback)
         rospy.loginfo(f"Sent coordinates: {coords}")
 
     def spawn_specific_object(self):

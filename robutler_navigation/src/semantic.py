@@ -4,10 +4,10 @@ import rospy
 import yaml
 import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from std_msgs.msg import String
 import tf2_ros
 from tf2_geometry_msgs import PoseStamped
 from tf.transformations import quaternion_from_euler
+from robutler_navigation.msg import SemanticNavigationAction, SemanticNavigationFeedback, SemanticNavigationResult  # Import the custom action
 
 class SemanticNavigator:
     def __init__(self):
@@ -19,14 +19,17 @@ class SemanticNavigator:
         # Load locations
         self.locations = self.load_locations()
         
-        self.move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        rospy.loginfo("Waiting for move_base action server...")
-        self.move_base_client.wait_for_server()
-        rospy.loginfo("Connected to move_base action server")
-
-        self.goal_sub = rospy.Subscriber('semantic_goal', String, self.goal_callback)
+        # Create an action server
+        self.action_server = actionlib.SimpleActionServer(
+            'semantic_navigation',  # Action name
+            SemanticNavigationAction,  # Custom action
+            execute_cb=self.execute_goal,  # The callback to handle incoming goals
+            auto_start=False
+        )
         
         rospy.loginfo("Semantic navigator initialized")
+        
+        self.action_server.start()
 
     def load_locations(self):
         """Load locations from yaml file"""
@@ -37,10 +40,6 @@ class SemanticNavigator:
         except Exception as e:
             rospy.logwarn(f"Could not load locations file: {e}")
             return {}
-
-    def pose_callback(self, msg):
-        """Store current pose"""
-        self.current_pose = msg.pose.pose
 
     def create_pose_stamped(self, x, y, yaw):
         """Create a PoseStamped message"""
@@ -61,14 +60,18 @@ class SemanticNavigator:
         
         return pose
 
-    def goal_callback(self, msg):
-        """Handle semantic navigation goals"""
-        location_name = msg.data
+    def execute_goal(self, goal):
+        """Callback function for executing a goal"""
+        location_name = goal.location_name
         
         if location_name not in self.locations:
             rospy.logwarn(f"Unknown location: {location_name}")
+            result = SemanticNavigationResult()
+            result.success = False
+            result.message = f"Unknown location: {location_name}"
+            self.action_server.set_succeeded(result)
             return
-            
+        
         location = self.locations[location_name]
         
         try:
@@ -78,22 +81,41 @@ class SemanticNavigator:
                 location.get('yaw', 0)
             )
 
-            goal = MoveBaseGoal()
-            goal.target_pose = pose_stamped
+            move_base_client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+            move_base_client.wait_for_server()
+            
+            goal_move = MoveBaseGoal()
+            goal_move.target_pose = pose_stamped
             
             rospy.loginfo(f"Navigating to {location_name}")
-            self.move_base_client.send_goal(goal)
+            move_base_client.send_goal(goal_move)
             
-            self.move_base_client.wait_for_result()
+            # Send feedback during the navigation
+            while not move_base_client.wait_for_result(rospy.Duration(0.1)):
+                feedback = SemanticNavigationFeedback()
+                feedback.current_location = f"Currently navigating to {location_name}"
+                self.action_server.publish_feedback(feedback)
             
-            if self.move_base_client.get_state() == actionlib.GoalStatus.SUCCEEDED:
+            if move_base_client.get_state() == actionlib.GoalStatus.SUCCEEDED:
                 rospy.loginfo(f"Reached {location_name}")
+                result = SemanticNavigationResult()
+                result.success = True
+                result.message = f"Successfully reached {location_name}"
+                self.action_server.set_succeeded(result)
             else:
                 rospy.logwarn(f"Failed to reach {location_name}")
+                result = SemanticNavigationResult()
+                result.success = False
+                result.message = f"Failed to reach {location_name}"
+                self.action_server.set_aborted(result)
                 
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
                 tf2_ros.ExtrapolationException) as e:
             rospy.logwarn(f"TF2 error: {e}")
+            result = SemanticNavigationResult()
+            result.success = False
+            result.message = "TF2 error during navigation"
+            self.action_server.set_aborted(result)
 
 if __name__ == '__main__':
     try:
