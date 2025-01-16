@@ -46,9 +46,6 @@ class RobutlerUI(QMainWindow):
             rospy.logerr("Required parameters not set! Please set locations_file parameters.")
             sys.exit(1)
         
-        self.semantic_pub = rospy.Publisher('/semantic_goal', String, queue_size=10)
-        self.coord_pub = rospy.Publisher('/move_to_coord', String, queue_size=10)
-        
         self.locations = self.load_semantic_locations()
         
         self.model_names = ['sphere_v', 'bottle_white_wine', 'human_female_1', 'laptop_pc_1']

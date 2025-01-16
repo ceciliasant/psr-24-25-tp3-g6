@@ -3,9 +3,34 @@
 import rospy
 from std_msgs.msg import String
 import speech_recognition as sr
+from robutler_navigation.msg import SemanticNavigationAction, SemanticNavigationGoal
+import actionlib
+
+def done_callback(state, result):
+            """Callback for when the action is done."""
+            if result.success:
+                rospy.loginfo(f"Successfully reached the location. Message: {result.message}")
+            else:
+                rospy.logwarn(f"Failed to reach the location. Message: {result.message}")
+
+def active_callback():
+    """Callback for when the goal is active and being processed."""
+    rospy.loginfo("Action goal is now active!")
+
+def feedback_callback(feedback):
+    """Callback for receiving feedback from the action server."""
+    rospy.loginfo(f"Feedback: {feedback.current_location}")
+
+
+def send_semantic_goal(self):
+        loc = self.semantic_combo.currentText()
+        
 
 def voice_recognition_node():
     rospy.init_node('voice_recognition_node', anonymous=True)
+
+    semantic_client = actionlib.SimpleActionClient('semantic_navigation', SemanticNavigationAction)
+    semantic_client.wait_for_server()
     
     semantic_publisher = rospy.Publisher('/semantic_goal', String, queue_size=10)
     
@@ -26,7 +51,10 @@ def voice_recognition_node():
             rospy.loginfo(f"Recognized command: {command}")
 
             if command in ["bedroom", "kitchen", "living room"]:
-                rospy.loginfo(f"Publishing '{command}' to /semantic topic")
+                goal = SemanticNavigationGoal()
+                goal.location_name = command
+                rospy.loginfo(f"Sending goal to navigate to {command}...")
+                semantic_client.send_goal(goal, done_cb=done_callback, active_cb=active_callback, feedback_cb=feedback_callback)
                 semantic_publisher.publish(command)
             else:
                 rospy.loginfo(f"Unrecognized command: {command}")

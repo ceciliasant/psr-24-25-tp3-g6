@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="robutler_missions" type="mission_manager.py" name="missions_node" output="screen">
+    </node>
+</launch>
