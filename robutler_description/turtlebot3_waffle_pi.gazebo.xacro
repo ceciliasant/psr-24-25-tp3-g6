@@ -145,34 +145,72 @@
 
 <!--link : https://www.raspberrypi.org/documentation/hardware/camera/-->
   <gazebo reference="camera_rgb_frame">
-    <sensor type="camera" name="Pi Camera">
+    <sensor type="depth" name="camera">
       <always_on>true</always_on>
       <visualize>$(arg camera_visual)</visualize>
       <camera>
-          <horizontal_fov>1.085595</horizontal_fov>
-          <image>
-              <width>640</width>
-              <height>480</height>
-              <format>R8G8B8</format>
-          </image>
-          <clip>
-              <near>0.03</near>
-              <far>100</far>
-          </clip>
+        <horizontal_fov>1.047198</horizontal_fov>
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>B8G8R8</format>
+        </image>
+        <clip>
+          <near>0.05</near>
+          <far>3.0</far>
+        </clip>
+        <depth_camera>
+          <output>depths</output>
+        </depth_camera>
       </camera>
-      <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+      <plugin name="camera_controller" filename="libgazebo_ros_openni_kinect.so">
+        <baseline>0.2</baseline>
         <alwaysOn>true</alwaysOn>
         <updateRate>30.0</updateRate>
         <cameraName>camera</cameraName>
         <frameName>camera_rgb_optical_frame</frameName>
         <imageTopicName>rgb/image_raw</imageTopicName>
         <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
-        <hackBaseline>0.07</hackBaseline>
-        <distortionK1>0.0</distortionK1>
-        <distortionK2>0.0</distortionK2>
-        <distortionK3>0.0</distortionK3>
-        <distortionT1>0.0</distortionT1>
-        <distortionT2>0.0</distortionT2>
+        <depthImageTopicName>depth/image_raw</depthImageTopicName>
+        <depthImageInfoTopicName>depth/camera_info</depthImageInfoTopicName>
+        <pointCloudTopicName>depth/points</pointCloudTopicName>
+        <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- Elevated RGB-D Camera -->
+  <gazebo reference="elevated_camera_rgb_frame">
+    <sensor type="depth" name="elevated_camera">
+      <always_on>true</always_on>
+      <visualize>$(arg camera_visual)</visualize>
+      <camera>
+        <horizontal_fov>1.047198</horizontal_fov>
+        <image>
+          <width>640</width>
+          <height>480</height>
+          <format>B8G8R8</format>
+        </image>
+        <clip>
+          <near>0.05</near>
+          <far>3.0</far>
+        </clip>
+        <depth_camera>
+          <output>depths</output>
+        </depth_camera>
+      </camera>
+      <plugin name="elevated_camera_controller" filename="libgazebo_ros_openni_kinect.so">
+        <baseline>0.2</baseline>
+        <alwaysOn>true</alwaysOn>
+        <updateRate>30.0</updateRate>
+        <cameraName>elevated_camera</cameraName>
+        <frameName>elevated_camera_rgb_optical_frame</frameName>
+        <imageTopicName>rgb/image_raw</imageTopicName>
+        <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
+        <depthImageTopicName>depth/image_raw</depthImageTopicName>
+        <depthImageInfoTopicName>depth/camera_info</depthImageInfoTopicName>
+        <pointCloudTopicName>depth/points</pointCloudTopicName>
+        <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
       </plugin>
     </sensor>
   </gazebo>
