@@ -16,11 +16,15 @@ class ObjectDetectionNode:
         rospy.init_node('object_detection_node', anonymous=True)
         
         self.camera_model = PinholeCameraModel()
+        self.elevated_camera_model = PinholeCameraModel()
+
         self.got_camera_info = False
+        self.got_elevated_camera_info=  False
         
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
         
+        ## base camera
         self.image_sub = message_filters.Subscriber("/camera/rgb/image_raw", Image)
         self.depth_sub = message_filters.Subscriber("/camera/depth/image_raw", Image)
         self.camera_info_sub = rospy.Subscriber("/camera/rgb/camera_info", CameraInfo, self.camera_info_callback)
@@ -29,6 +33,15 @@ class ObjectDetectionNode:
         self.ts = message_filters.TimeSynchronizer([self.image_sub, self.depth_sub], 10)
         self.ts.registerCallback(self.image_depth_callback)
         
+        ## elevated camera
+        self.elevated_image_sub = message_filters.Subscriber("/elevated_camera/rgb/image_raw", Image)
+        self.elevated_depth_sub = message_filters.Subscriber("/elevated_camera/depth/image_raw", Image)
+        self.elevated_camera_info_sub = rospy.Subscriber("/elevated_camera/rgb/camera_info", CameraInfo, self.elevated_camera_info_callback)
+
+        self.elevated_ts = message_filters.TimeSynchronizer([self.elevated_image_sub, self.elevated_depth_sub], 10)
+        self.elevated_ts.registerCallback(self.elevated_image_depth_callback)
+    
+
         self.object_pub = rospy.Publisher("/detected_objects", PointStamped, queue_size=10)
         
         self.bridge = CvBridge()
@@ -39,9 +52,14 @@ class ObjectDetectionNode:
         rospy.loginfo("Object Detection Node Initialized")
 
     def camera_info_callback(self, msg):
-        if not self.got_camera_info:
-            self.camera_model.fromCameraInfo(msg)
-            self.got_camera_info = True
+            if not self.got_camera_info:
+                self.camera_model.fromCameraInfo(msg)
+                self.got_camera_info = True
+
+    def elevated_camera_info_callback(self, msg):
+        if not self.got_elevated_camera_info:
+            self.elevated_camera_model.fromCameraInfo(msg)
+            self.got_elevated_camera_info = True
 
     def image_depth_callback(self, rgb_msg, depth_msg):
         if not self.got_camera_info:
@@ -79,14 +97,65 @@ class ObjectDetectionNode:
             
             depth_image = np.nan_to_num(depth_image, nan=0.0, posinf=0.0, neginf=0.0)
             
-            self.detect_objects(cv_image, depth_image, rgb_msg.header.stamp)
+            self.detect_objects(cv_image, depth_image, rgb_msg.header.stamp, self.camera_model, "camera_rgb_optical_frame")
 
         except Exception as e:
             rospy.logerr(f"Failed to process image: {str(e)}")
             import traceback
             rospy.logerr(traceback.format_exc())
 
-    def detect_objects(self, cv_image, depth_image, timestamp):
+    def elevated_image_depth_callback(self, rgb_msg, depth_msg):
+        if not self.got_elevated_camera_info:
+            rospy.logwarn("Elevated camera info not available yet.")
+            return
+
+        try:
+            if rgb_msg.encoding not in ['rgb8', 'bgr8']:
+                rospy.logwarn(f"Unexpected RGB encoding: {rgb_msg.encoding}")
+                rgb_msg.encoding = 'bgr8' 
+                
+            if depth_msg.encoding not in ['32FC1', '16UC1']:
+                rospy.logwarn(f"Unexpected depth encoding: {depth_msg.encoding}")
+                if depth_msg.encoding == '16UC1':
+                    depth_msg.encoding = '32FC1'
+            
+            try:
+                cv_image = self.bridge.imgmsg_to_cv2(rgb_msg, desired_encoding='bgr8')
+            except Exception as e:
+                rospy.logerr(f"Failed to convert RGB image: {e}")
+                return
+                
+            try:
+                depth_image = self.bridge.imgmsg_to_cv2(depth_msg, desired_encoding='32FC1')
+            except Exception as e:
+                rospy.logerr(f"Failed to convert depth image: {e}")
+                return
+            
+            if cv_image.shape[0] == 0 or cv_image.shape[1] == 0:
+                rospy.logerr("Invalid RGB image dimensions")
+                return
+                
+            if depth_image.shape[0] == 0 or depth_image.shape[1] == 0:
+                rospy.logerr("Invalid depth image dimensions")
+                return
+            
+            depth_image = np.nan_to_num(depth_image, nan=0.0, posinf=0.0, neginf=0.0)
+
+            self.detect_objects(
+                cv_image,
+                depth_image,
+                rgb_msg.header.stamp,
+                self.elevated_camera_model,
+                "elevated_camera_rgb_optical_frame"
+            )
+
+        except Exception as e:
+            rospy.logerr(f"Failed to process image: {str(e)}")
+            import traceback
+            rospy.logerr(traceback.format_exc())
+
+
+    def detect_objects(self, cv_image, depth_image, timestamp, camera_model, frame_id):
         try:
             hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
         except cv2.error as e:
@@ -137,12 +206,12 @@ class ObjectDetectionNode:
                         y = ray_z[1] * depth_m
                         z = depth_m
                         
-                        self.publish_object_location(x, y, z, timestamp)
+                        self.publish_object_location(x, y, z, timestamp, frame_id)
 
-    def publish_object_location(self, x, y, z, timestamp):
+    def publish_object_location(self, x, y, z, timestamp,frame_id):
         point_msg = PointStamped()
         point_msg.header.stamp = timestamp
-        point_msg.header.frame_id = "camera_rgb_optical_frame"
+        point_msg.header.frame_id = frame_id
         point_msg.point.x = x
         point_msg.point.y = y
         point_msg.point.z = z
@@ -150,7 +219,7 @@ class ObjectDetectionNode:
         try:
             transformed_point = self.tf_buffer.transform(point_msg, "map", rospy.Duration(1.0))
             self.object_pub.publish(transformed_point)
-            rospy.loginfo(f"Published object location in map frame: ({transformed_point.point.x:.2f}, "f"{transformed_point.point.y:.2f}, {transformed_point.point.z:.2f})")
+            rospy.loginfo(f"Published object location from {frame_id} in map frame: ({transformed_point.point.x:.2f}, "f"{transformed_point.point.y:.2f}, {transformed_point.point.z:.2f})")
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, 
                 tf2_ros.ExtrapolationException) as e:
             rospy.logwarn(f"Failed to transform point: {e}")
