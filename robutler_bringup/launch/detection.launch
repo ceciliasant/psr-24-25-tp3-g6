@@ -2,5 +2,8 @@
 
   <node pkg="robutler_perception" type="object_detection.py" name="object_detection_node" output="screen">
   </node>
+
+  <node pkg="robutler_perception" type="wander.py" name="wander_node" output="screen">
+  </node>
   
 </launch>

@@ -1,0 +1,10 @@
+# Goal: The input sent from the client to the server
+string object
+---
+# Result: The output sent from the server to the client
+bool found
+float64 x
+float64 y
+---
+# Feedback: Intermediate updates sent from the server to the client
+string status

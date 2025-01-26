@@ -11,6 +11,10 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   std_msgs
+  robutler_navigation
+  actionlib
+  actionlib_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -67,11 +71,22 @@ find_package(catkin REQUIRED COMPONENTS
 #   Action2.action
 # )
 
+add_action_files(
+  DIRECTORY action
+  FILES CountObjects.action FindObject.action DetectObject.action CountObject.action
+)
+
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
 #   sensor_msgs#   std_msgs
 # )
+
+generate_messages(
+  DEPENDENCIES
+  actionlib_msgs
+  std_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -107,6 +122,8 @@ catkin_package(
 #  LIBRARIES robutler_perception
 #  CATKIN_DEPENDS rospy sensor_msgs std_msgs
 #  DEPENDS system_lib
+
+  CATKIN_DEPENDS message_runtime robutler_navigation actionlib actionlib_msgs
 )
 
 ###########
@@ -160,7 +177,7 @@ include_directories(
 ## Mark executable scripts (Python etcmy_detection_node.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  src/object_detection.py
+  src/object_detection.py src/wander.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

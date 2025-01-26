@@ -6,6 +6,7 @@ from visualization_msgs.msg import Marker, InteractiveMarker, InteractiveMarkerC
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from geometry_msgs.msg import Point, Pose
 from robutler_navigation.msg import SemanticNavigationAction, SemanticNavigationGoal
+from robutler_perception.msg import FindObjectGoal, FindObjectAction
 
 class MissionManager:
     def __init__(self):
@@ -16,6 +17,9 @@ class MissionManager:
         
         self.semantic_client = actionlib.SimpleActionClient('semantic_navigation', SemanticNavigationAction)
         self.semantic_client.wait_for_server()
+
+        self.finder_client = actionlib.SimpleActionClient('object_finder', FindObjectAction)
+        self.finder_client.wait_for_server()
         
         # current mission and status
         self.current_mission = None
@@ -120,15 +124,16 @@ class MissionManager:
         menu_handler.insert("Move to bedroom", callback=self.process_feedback)
         menu_handler.insert("Move to kitchen", callback=self.process_feedback)
         menu_handler.insert("Move to living room", callback=self.process_feedback)
+        menu_handler.insert("Find Violet Sphere", callback=self.process_feedback)
         
         return menu_handler
 
     def done_callback(self, state, result):
         """Callback for when the action is done."""
         if result.success:
-            rospy.loginfo(f"Successfully reached the location. Message: {result.message}")
+            rospy.loginfo(f"Successfully completed mission. Message: {result.message}")
         else:
-            rospy.logwarn(f"Failed to reach the location. Message: {result.message}")
+            rospy.logwarn(f"Failed to complete mission. Message: {result.message}")
 
         self.update_status_text(result.message)
 
@@ -144,6 +149,7 @@ class MissionManager:
             1: self.move_to_bedroom,
             2: self.move_to_kitchen,
             3: self.move_to_living_room,
+            4: self.find_sphere_v
         }
         
         if mission_id in missions:
@@ -155,6 +161,12 @@ class MissionManager:
         goal.location_name = location_name
         rospy.loginfo(f"Sending goal to navigate to {location_name}...")
         self.semantic_client.send_goal(goal, done_cb=self.done_callback)
+
+    def find_object(self, object_name, division = None):
+        goal = FindObjectGoal()
+        goal.object = object_name
+        rospy.loginfo(f"Trying to find {object_name}...")
+        self.finder_client.send_goal(goal, done_cb=self.done_callback)
 
     # Mission implementations
     def move_to_bedroom(self):
@@ -168,6 +180,10 @@ class MissionManager:
     def move_to_living_room(self):
         self.move_to_location('living room')
         self.update_status_text("Moving to Living Room")
+
+    def find_sphere_v(self):
+        self.find_object("sphere_v")
+        self.update_status_text("Trying to find Violet Sphere")
 
     def run(self):
         rate = rospy.Rate(10)  # 10 Hz

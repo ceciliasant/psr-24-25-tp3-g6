@@ -62,6 +62,8 @@
   <build_depend>robutler_navigation</build_depend>
   <exec_depend>robutler_navigation</exec_depend>
 
+  <build_depend>robutler_perception</build_depend>
+  <exec_depend>robutler_perception</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

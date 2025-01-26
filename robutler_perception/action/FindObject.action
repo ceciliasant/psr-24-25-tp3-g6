@@ -1,0 +1,10 @@
+# Goal: The input sent from the client to the server
+string object
+string division
+---
+# Result: The output sent from the server to the client
+bool success
+string message
+---
+# Feedback: Intermediate updates sent from the server to the client
+string status

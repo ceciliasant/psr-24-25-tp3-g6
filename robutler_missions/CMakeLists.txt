@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   robutler_navigation
+  robutler_perception
 )
 
 ## System dependencies are found with CMake's conventions
@@ -108,7 +109,7 @@ catkin_package(
 #  LIBRARIES robutler_missions
 #  CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
-  CATKIN_DEPENDS robutler_navigation message_runtime
+  CATKIN_DEPENDS robutler_navigation message_runtime robutler_perception
 )
 
 ###########

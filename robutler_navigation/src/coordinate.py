@@ -43,6 +43,7 @@ class CommonNavigator:
         pose.pose.position.y = y
         pose.pose.position.z = 0.0
         
+        # How can i keep my current orientation?
         quat = quaternion_from_euler(0, 0, yaw)
         pose.pose.orientation.x = quat[0]
         pose.pose.orientation.y = quat[1]
@@ -61,15 +62,24 @@ class CommonNavigator:
             
             rospy.loginfo(f"Navigating to coordinates: x={x}, y={y}")
             self.move_base_client.send_goal(goal)
-            
-            self.move_base_client.wait_for_result()
-            
-            if self.move_base_client.get_state() == actionlib.GoalStatus.SUCCEEDED:
-                rospy.loginfo("Reached target coordinates")
-                return True
-            else:
-                rospy.logwarn("Failed to reach target coordinates")
-                return False
+
+            rate = rospy.Rate(10)
+
+            while not rospy.is_shutdown():
+                if self.action_server.is_preempt_requested():
+                    rospy.logwarn("Goal preempted by the client")
+                    self.move_base_client.cancel_all_goals()
+                    return False
+
+                state = self.move_base_client.get_state()
+                if state == actionlib.GoalStatus.SUCCEEDED:
+                    rospy.loginfo("Reached target coordinates")
+                    return True
+                elif state in [actionlib.GoalStatus.ABORTED, actionlib.GoalStatus.PREEMPTED, actionlib.GoalStatus.REJECTED]:
+                    rospy.logwarn("Failed to reach target coordinates")
+                    return False
+                
+                rate.sleep()
                 
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException,
                 tf2_ros.ExtrapolationException) as e:
@@ -86,21 +96,24 @@ class CommonNavigator:
         feedback = CoordinateNavigationFeedback()
         result = CoordinateNavigationResult()
         
-        # Simulate navigation (in a real-world scenario, this would be where you invoke your `navigate_to`)
-        success = self.navigate_to(x, y)
+        try:
+            success = self.navigate_to(x, y)
 
-        if success:
-            result.success = True
-            result.message = "Successfully reached target coordinates"
-            feedback.current_location = f"Currently at x={x}, y={y}"
-            self.action_server.publish_feedback(feedback)
-            self.action_server.set_succeeded(result)
-        else:
-            result.success = False
-            result.message = "Failed to reach target coordinates"
-            feedback.current_location = f"Failed to reach x={x}, y={y}"
-            self.action_server.publish_feedback(feedback)
-            self.action_server.set_aborted(result)
+            if success:
+                result.success = True
+                result.message = "Successfully reached target coordinates"
+                feedback.current_location = f"Currently at x={x}, y={y}"
+                self.action_server.publish_feedback(feedback)
+                self.action_server.set_succeeded(result)
+            else:
+                result.success = False
+                result.message = "Failed to reach target coordinates"
+                feedback.current_location = f"Failed to reach x={x}, y={y}"
+                self.action_server.publish_feedback(feedback)
+                self.action_server.set_aborted(result)
+        finally:
+            if self.move_base_client.get_state() in [actionlib.GoalStatus.PENDING, actionlib.GoalStatus.ACTIVE]:
+                self.move_base_client.cancel_all_goals()
 
 if __name__ == '__main__':
     try:
