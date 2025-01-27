@@ -30,6 +30,7 @@ class MissionManager:
             'bedroom': Pose(position=Point(-4.409525, -0.182006, 0.0)),
             'living_room': Pose(position=Point(0.783383, -0.379899, 0.0)),
             'kitchen': Pose(position=Point(6.568593, -1.788789, 0.0)),
+            'gym': Pose(position=Point(2, 4, 0.0))
         }
         
         # markers initialisation
@@ -124,6 +125,7 @@ class MissionManager:
         menu_handler.insert("Move to bedroom", callback=self.process_feedback)
         menu_handler.insert("Move to kitchen", callback=self.process_feedback)
         menu_handler.insert("Move to living room", callback=self.process_feedback)
+        menu_handler.insert("Move to gym", callback=self.process_feedback)
         menu_handler.insert("Find Violet Sphere", callback=self.process_feedback)
         menu_handler.insert("Find Human Female", callback=self.process_feedback)
         menu_handler.insert("Find Laptop", callback=self.process_feedback)
@@ -152,10 +154,11 @@ class MissionManager:
             1: self.move_to_bedroom,
             2: self.move_to_kitchen,
             3: self.move_to_living_room,
-            4: self.find_sphere_v,
-            5: self.find_human_female,
-            6: self.find_laptop,
-            7: self.find_wine_bottle
+            4: self.move_to_gym,
+            5: self.find_sphere_v,
+            6: self.find_human_female,
+            7: self.find_laptop,
+            8: self.find_wine_bottle
         }
         
         if mission_id in missions:
@@ -187,6 +190,10 @@ class MissionManager:
         self.move_to_location('living room')
         self.update_status_text("Moving to Living Room")
 
+    def move_to_gym(self):
+        self.move_to_location('gym')
+        self.update_status_text("Moving to Gym")
+
     def find_sphere_v(self):
         self.find_object("sphere_v")
         self.update_status_text("Trying to find Violet Sphere")
@@ -202,7 +209,7 @@ class MissionManager:
     def find_wine_bottle(self):
         self.find_object("wine_bottle")
         self.update_status_text("Trying to find wine bottle")
-        
+
     def run(self):
         rate = rospy.Rate(10)  # 10 Hz
         while not rospy.is_shutdown():
