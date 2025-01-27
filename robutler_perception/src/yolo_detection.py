@@ -2,7 +2,7 @@
 
 import rospy
 import cv2
-from ultralytics import YOLO  # Import YOLO from ultralytics
+from ultralytics import YOLO  
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import PointStamped
@@ -101,16 +101,15 @@ class YoloDetectionNode:
 
     def detect_objects(self, cv_image, depth_image, timestamp, frame_id):
         try:
-            # YOLO inference
             results = self.model.predict(cv_image, imgsz=640)
 
-            for result in results[0].boxes:  # Access detected bounding boxes
+            for result in results[0].boxes: 
                 cls_id = int(result.cls[0])
                 confidence = result.conf[0]
                 label = self.model.names[cls_id]
 
                 if label.lower() != self.active_goal:
-                    continue  # Skip if the detected class is not the goal
+                    continue  
 
                 x_min, y_min, x_max, y_max = map(int, result.xyxy[0])
                 bbox_center = ((x_min + x_max) // 2, (y_min + y_max) // 2)
