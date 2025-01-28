@@ -291,7 +291,7 @@ class ObjectDetectionNode:
                             rospy.logwarn(f"Transform failed: {e}")
                             return False, 0, 0
                         
-                        # self.publish_object_location(x, y, z, timestamp, frame_id)
+                        self.publish_object_location(x, y, z, timestamp, frame_id)
         return False, 0, 0
 
     def publish_object_location(self, x, y, z, timestamp,frame_id):
