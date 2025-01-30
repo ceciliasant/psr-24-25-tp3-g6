@@ -6,7 +6,7 @@
   <node pkg="robutler_perception" type="wander.py" name="wander_node" output="screen">
   </node>
 
-  <node pkg="robutler_perception" type="yolo_detection.py" name="ultralytics" output="screen">
-  </node>
-  
+  <!-- <node pkg="robutler_perception" type="yolo_detection.py" name="ultralytics" output="screen">
+  </node> -->
+
 </launch>

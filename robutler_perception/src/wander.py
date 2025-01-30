@@ -75,7 +75,7 @@ class Explorer:
                 detect_result = self.detection_client.get_result()
                 if detect_result is not None and detect_result.found:
                     result.success = True
-                    result.message = f"Found {goal.object} at ({detect_result.x}, {detect_result.y})"
+                    result.message = f"Found {goal.object} at ({detect_result.x:.2f}, {detect_result.y:.2f})"
                     self.object_finder_server.set_succeeded(result)
                     return
                 else:

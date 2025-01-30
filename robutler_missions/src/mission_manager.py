@@ -127,9 +127,9 @@ class MissionManager:
         menu_handler.insert("Move to living room", callback=self.process_feedback)
         menu_handler.insert("Move to gym", callback=self.process_feedback)
         menu_handler.insert("Find Violet Sphere", callback=self.process_feedback)
-        menu_handler.insert("Find Human Female", callback=self.process_feedback)
+        menu_handler.insert("Find Person", callback=self.process_feedback)
         menu_handler.insert("Find Laptop", callback=self.process_feedback)
-        menu_handler.insert("Find Wine Bottle", callback=self.process_feedback)
+        menu_handler.insert("Find Bottle", callback=self.process_feedback)
 
         return menu_handler
 
@@ -156,9 +156,9 @@ class MissionManager:
             3: self.move_to_living_room,
             4: self.move_to_gym,
             5: self.find_sphere_v,
-            6: self.find_human_female,
+            6: self.find_person,
             7: self.find_laptop,
-            8: self.find_wine_bottle
+            8: self.find_bottle
         }
         
         if mission_id in missions:
@@ -198,17 +198,17 @@ class MissionManager:
         self.find_object("sphere_v")
         self.update_status_text("Trying to find Violet Sphere")
 
-    def find_human_female(self):
-        self.find_object("human_female")
-        self.update_status_text("Trying to find human female")
+    def find_person(self):
+        self.find_object("person")
+        self.update_status_text("Trying to find a person")
 
     def find_laptop(self):
         self.find_object("laptop")
-        self.update_status_text("Trying to find laptop")
+        self.update_status_text("Trying to find a laptop")
 
-    def find_wine_bottle(self):
-        self.find_object("wine_bottle")
-        self.update_status_text("Trying to find wine bottle")
+    def find_bottle(self):
+        self.find_object("bottle")
+        self.update_status_text("Trying to find a bottle")
 
     def run(self):
         rate = rospy.Rate(10)  # 10 Hz
