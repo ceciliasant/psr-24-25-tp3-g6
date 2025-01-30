@@ -286,29 +286,28 @@ class ObjectDetectionNode:
                         
                         try:
                             transformed = self.tf_buffer.transform(point_msg, "map", rospy.Duration(1))
+                            rospy.loginfo(f"Published object location from {frame_id} in map frame: ({transformed.point.x:.2f}, "f"{transformed.point.y:.2f}, {transformed.point.z:.2f})")
                             return True, transformed.point.x, transformed.point.y
                         except tf2_ros.TransformException as e:
                             rospy.logwarn(f"Transform failed: {e}")
-                            return False, 0, 0
-                        
-                        # self.publish_object_location(x, y, z, timestamp, frame_id)
+                            return False, 0, 0        
         return False, 0, 0
 
-    def publish_object_location(self, x, y, z, timestamp,frame_id):
-        point_msg = PointStamped()
-        point_msg.header.stamp = timestamp
-        point_msg.header.frame_id = frame_id
-        point_msg.point.x = x
-        point_msg.point.y = y
-        point_msg.point.z = z
+    # def publish_object_location(self, x, y, z, timestamp,frame_id):
+    #     point_msg = PointStamped()
+    #     point_msg.header.stamp = timestamp
+    #     point_msg.header.frame_id = frame_id
+    #     point_msg.point.x = x
+    #     point_msg.point.y = y
+    #     point_msg.point.z = z
         
-        try:
-            transformed_point = self.tf_buffer.transform(point_msg, "map", rospy.Duration(1.0))
-            # self.object_pub.publish(transformed_point)
-            rospy.loginfo(f"Published object location from {frame_id} in map frame: ({transformed_point.point.x:.2f}, "f"{transformed_point.point.y:.2f}, {transformed_point.point.z:.2f})")
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, 
-                tf2_ros.ExtrapolationException) as e:
-            rospy.logwarn(f"Failed to transform point: {e}")
+    #     try:
+    #         transformed_point = self.tf_buffer.transform(point_msg, "map", rospy.Duration(1.0))
+    #         # self.object_pub.publish(transformed_point)
+    #         rospy.loginfo(f"Published object location from {frame_id} in map frame: ({transformed_point.point.x:.2f}, "f"{transformed_point.point.y:.2f}, {transformed_point.point.z:.2f})")
+    #     except (tf2_ros.LookupException, tf2_ros.ConnectivityException, 
+    #             tf2_ros.ExtrapolationException) as e:
+    #         rospy.logwarn(f"Failed to transform point: {e}")
 
 if __name__ == '__main__':
     try:

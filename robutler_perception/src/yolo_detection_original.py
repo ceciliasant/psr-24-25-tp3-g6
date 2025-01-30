@@ -6,6 +6,15 @@ from ultralytics import YOLO
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
+from geometry_msgs.msg import PointStamped
+import numpy as np
+import message_filters
+import tf2_ros
+import tf2_geometry_msgs 
+from image_geometry import PinholeCameraModel
+import actionlib
+from robutler_perception.msg import DetectObjectAction, DetectObjectFeedback, DetectObjectResult, CountObjectAction, CountObjectFeedback, CountObjectResult
+
 
 class YoloDetectionNode:
     def __init__(self):
@@ -29,6 +38,35 @@ class YoloDetectionNode:
         self.image_sub_camera = rospy.Subscriber("/camera/rgb/image_raw", Image, self.callback, callback_args="camera")
         self.bridge = CvBridge()
         rospy.loginfo("YOLO Detection Node Initialized.")
+
+        # Create the action server
+        self.object_detect_server = actionlib.SimpleActionServer(
+            'detect_object',  # Action name
+            DetectObjectAction,  # Custom action
+            execute_cb=self.detect_object_cb,  # The callback to handle incoming goals
+            auto_start=False
+        )
+
+        self.object_count_server = actionlib.SimpleActionServer(
+            'count_object',  # Action name
+            CountObjectAction,  # Custom action
+            execute_cb=self.count_object_cb,  # The callback to handle incoming goals
+            auto_start=False
+        )
+
+        self.object_detect_server.start()
+        self.object_count_server.start()
+        
+        self.active_goal = None
+
+        self.camera_model = PinholeCameraModel()
+        self.elevated_camera_model = PinholeCameraModel()
+
+        self.got_camera_info = False
+        self.got_elevated_camera_info=  False
+        
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
     def callback(self, data, camera_name):
         """Process input image and publish detection/segmentation results."""
