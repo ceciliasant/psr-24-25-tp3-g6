@@ -63,8 +63,8 @@ class ObjectDetectionNode:
         self.image_sub_elevated = rospy.Subscriber("/elevated_camera/rgb/image_raw", Image, self.callback, callback_args="elevated_camera")
         self.image_sub_camera = rospy.Subscriber("/camera/rgb/image_raw", Image, self.callback, callback_args="camera")
 
-        self.camera_info_sub = rospy.Subscriber("/camera/rgb/camera_info", CameraInfo, self.camera_info_callback)
-        self.elevated_camera_info_sub = rospy.Subscriber("/elevated_camera/rgb/camera_info", CameraInfo, self.elevated_camera_info_callback)
+        self.camera_info_sub = rospy.Subscriber("/camera/rgb/camera_info", CameraInfo, self.camera_info_cb)
+        self.elevated_camera_info_sub = rospy.Subscriber("/elevated_camera/rgb/camera_info", CameraInfo, self.elevated_camera_info_cb)
         
         self.timeout = rospy.Duration(30)
 
@@ -92,6 +92,7 @@ class ObjectDetectionNode:
                     rospy.loginfo("Detection preempted")
                     self.object_detect_server.set_preempted()
                     return
+                rospy.sleep(0.1)
                 
                 # image callbacks will doing their job
                 feedback.status = f"Scanning for {goal.object}..."
@@ -111,7 +112,8 @@ class ObjectDetectionNode:
             
             seg_results = self.segmentation_model(cv_image)
             classes = seg_results[0].boxes.cls.cpu().numpy().astype(int)
-            names = [seg_results[0].names[i] for i in classes] 
+
+            names = [seg_results[0].names[i].lower() for i in classes] 
 
             if names:
                 rospy.loginfo(f"{camera_name} detected: {names}")
