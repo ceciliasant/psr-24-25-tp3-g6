@@ -58,8 +58,10 @@ class Explorer:
 
         self.current_waypoint_index = 0
 
-        # Start exploring 
-        while not rospy.is_shutdown():
+        detection_goal = DetectObjectGoal(object=goal.object)
+        self.detection_client.send_goal(detection_goal)
+
+        while True:
             if self.object_finder_server.is_preempt_requested():
                 self.navigation_client.cancel_all_goals()
                 self.detection_client.cancel_all_goals()
@@ -70,7 +72,7 @@ class Explorer:
             detect_state = self.detection_client.get_state()
 
             if detect_state == actionlib.GoalStatus.SUCCEEDED:
-                rospy.loginfo("Should stop now")
+                rospy.loginfo("Detection succeeded. Checking result...")
                 self.navigation_client.cancel_all_goals()
                 detect_result = self.detection_client.get_result()
                 if detect_result is not None and detect_result.found:
@@ -79,17 +81,13 @@ class Explorer:
                     self.object_finder_server.set_succeeded(result)
                     return
                 else:
-                    self.detection_client.cancel_all_goals()
+                    self.detection_client.send_goal(detection_goal)
+                    rospy.loginfo("Sent new detection goal.")
 
             elif detect_state in [actionlib.GoalStatus.ABORTED, actionlib.GoalStatus.PREEMPTED]:
-                feedback.status = "Detection failed."
+                feedback.status = "Detection failed. Restarting..."
                 self.object_finder_server.publish_feedback(feedback)
 
-            if detect_state not in [actionlib.GoalStatus.PENDING, actionlib.GoalStatus.ACTIVE]:
-                detection_goal = DetectObjectGoal(object=goal.object)
-                self.detection_client.send_goal(detection_goal)
-
-            # Check if current navigation goal is completed and send next waypoint
             if nav_state not in [actionlib.GoalStatus.PENDING, actionlib.GoalStatus.ACTIVE, actionlib.GoalStatus.PREEMPTING, actionlib.GoalStatus.RECALLING]:
                 if self.current_waypoint_index < len(waypoints):
                     next_waypoint = waypoints[self.current_waypoint_index]

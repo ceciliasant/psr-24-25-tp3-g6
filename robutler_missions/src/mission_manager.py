@@ -30,7 +30,7 @@ class MissionManager:
             'bedroom': Pose(position=Point(-4.409525, -0.182006, 0.0)),
             'living_room': Pose(position=Point(0.783383, -0.379899, 0.0)),
             'kitchen': Pose(position=Point(6.568593, -1.788789, 0.0)),
-            'gym': Pose(position=Point(2, 4, 0.0))
+            'gym': Pose(position=Point(2.0, 4.0, 0.0))
         }
         
         # markers initialisation
