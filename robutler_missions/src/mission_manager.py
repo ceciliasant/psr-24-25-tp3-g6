@@ -7,6 +7,7 @@ from interactive_markers.interactive_marker_server import InteractiveMarkerServe
 from geometry_msgs.msg import Point, Pose
 from robutler_navigation.msg import SemanticNavigationAction, SemanticNavigationGoal
 from robutler_perception.msg import FindObjectGoal, FindObjectAction
+from geometry_msgs.msg import Twist
 
 class MissionManager:
     def __init__(self):
@@ -36,6 +37,11 @@ class MissionManager:
         # markers initialisation
         self.create_mission_marker()
         self.create_mission_text_marker()
+
+        # # pushing sphere
+        # self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        # self.push_distance = 0.5  # meters to push
+        # self.push_speed = 0.1     # m/s
 
     def create_mission_marker(self):
         int_marker = InteractiveMarker()
@@ -130,6 +136,7 @@ class MissionManager:
         menu_handler.insert("Find Person", callback=self.process_feedback)
         menu_handler.insert("Find Laptop", callback=self.process_feedback)
         menu_handler.insert("Find Bottle", callback=self.process_feedback)
+        # menu_handler.insert("Push Violet Sphere", callback=self.process_feedback)
 
         return menu_handler
 
@@ -159,6 +166,7 @@ class MissionManager:
             6: self.find_person,
             7: self.find_laptop,
             8: self.find_bottle
+            # 9: self.push_sphere_v
         }
         
         if mission_id in missions:
@@ -209,6 +217,23 @@ class MissionManager:
     def find_bottle(self):
         self.find_object("bottle")
         self.update_status_text("Trying to find a bottle")
+
+    # def push_sphere_v(self, x, y):
+    #     # Calculate push direction (simplified straight push)
+    #     push_cmd = Twist()
+    #     push_cmd.linear.x = self.push_speed
+        
+    #     # Push for time = distance/speed
+    #     push_duration = self.push_distance / self.push_speed
+    #     start_time = rospy.Time.now()
+        
+    #     while (rospy.Time.now() - start_time).to_sec() < push_duration:
+    #         self.cmd_vel_pub.publish(push_cmd)
+    #         rospy.sleep(0.1)
+            
+    #     # Stop
+    #     self.cmd_vel_pub.publish(Twist())
+    #     self.update_status_text("Push Complete")
 
     def run(self):
         rate = rospy.Rate(10)  # 10 Hz

@@ -177,7 +177,7 @@ include_directories(
 ## Mark executable scripts (Python etcmy_detection_node.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  src/object_detection.py src/wander.py src/yolo_detection.py 
+  src/object_detection.py src/wander.py 
   # src/detection.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
