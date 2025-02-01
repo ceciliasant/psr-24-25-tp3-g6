@@ -21,7 +21,7 @@ class ObjectDetectionNode:
         rospy.init_node('object_detection_node', anonymous=True)
 
         # YOLO model
-        self.segmentation_model = YOLO("yolo11m-seg.pt")
+        self.model = YOLO("yolo11m.pt")
 
         self.timeout = rospy.Duration(30)
 
@@ -258,34 +258,43 @@ class ObjectDetectionNode:
     def yolo_based_detection(self, cv_image, depth_image, timestamp, camera_model, frame_id):
         """YOLO-based detection for other objects"""
         try:
-            results = self.segmentation_model(cv_image)
-            if not results:
-                rospy.logwarn("No detection results")
+            results = self.model(cv_image)
+            # seg_annotated = results[0].plot()
+            # seg_msg = self.bridge.cv2_to_imgmsg(seg_annotated, encoding="bgr8")
+            
+            # if frame_id == "elevated_camera_rgb_optical_frame":
+            #     cv2.imshow("Elevated Camera Segmentation", seg_annotated)
+            #     cv2.waitKey(1)
+            # else:
+            #     cv2.imshow("Base Camera Segmentation", seg_annotated)
+            #     cv2.waitKey(1)
+
             classes = results[0].boxes.cls.cpu().numpy().astype(int)
             names = [results[0].names[i].lower() for i in classes]
-            if self.active_goal not in names:
-                return False, 0, 0
             
-            rospy.loginfo(f"Detected objects: {names}")
+            if self.active_goal not in names:
+                cv2.destroyAllWindows()
+                return False, 0, 0
+            if names:
+                rospy.loginfo(f"Detected objects: {names}")
 
-            boxes = results[0].boxes.xywh.cpu().numpy()
-            if not boxes:
-                rospy.logwarn("No boxes detected")
+            if self.active_goal in names:
+                boxes = results[0].boxes.xywh.cpu().numpy()
+                
+                rospy.loginfo(f"Detected boxes: {boxes}")
 
-            rospy.loginfo(f"Detected boxes: {boxes}")
+                # for index, cls in enumerate(results[0].boxes.cls):
+                #     class_index = int(cls.cpu().numpy())
+                #     name = results[0].names[class_index]
+                #     mask = results[0].masks.data.cpu().numpy()[index, :, :].astype(int)
+                #     obj = depth[mask == 1]
+                #     obj = obj[~np.isnan(obj)]
+                #     avg_distance = np.mean(obj) if len(obj) else np.inf
 
-            # for index, cls in enumerate(results[0].boxes.cls):
-            #     class_index = int(cls.cpu().numpy())
-            #     name = results[0].names[class_index]
-            #     mask = results[0].masks.data.cpu().numpy()[index, :, :].astype(int)
-            #     obj = depth[mask == 1]
-            #     obj = obj[~np.isnan(obj)]
-            #     avg_distance = np.mean(obj) if len(obj) else np.inf
-
-            idx = names.index(self.active_goal)
-            x_center, y_center, w, h = boxes[idx]
-            return self.process_yolo_detection((x_center, y_center), depth_image,
-                                             timestamp, camera_model, frame_id)
+                idx = names.index(self.active_goal)
+                x_center, y_center, w, h = boxes[idx]
+                return self.process_yolo_detection((x_center, y_center), depth_image,
+                                                timestamp, camera_model, frame_id)
 
         except Exception as e:
             rospy.logerr(f"YOLO detection failed: {str(e)}")
