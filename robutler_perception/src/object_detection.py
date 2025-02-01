@@ -151,7 +151,9 @@ class ObjectDetectionNode:
             if detected:
                 result = DetectObjectResult(found=True, x=x, y=y)
                 self.object_detect_server.set_succeeded(result)
+                rospy.loginfo(f"Object detected: {result}")
                 self.active_goal = None
+                rospy.loginfo("Active goal set to None")
 
         except Exception as e:
             rospy.logerr(f"Failed to process image: {str(e)}")
@@ -206,7 +208,10 @@ class ObjectDetectionNode:
             if detected:
                 result = DetectObjectResult(found=True, x=x, y=y)
                 self.object_detect_server.set_succeeded(result)
+                rospy.loginfo(f"Object detected: {result}")
                 self.active_goal = None
+                rospy.loginfo("Active goal set to None")
+
 
         except Exception as e:
             rospy.logerr(f"Elevated camera detection failed: {str(e)}")
@@ -214,8 +219,11 @@ class ObjectDetectionNode:
     def detect_objects(self, cv_image, depth_image, timestamp, camera_model, frame_id):
         """Detect objects in the image based on color or YOLO"""
         if self.active_goal == "sphere_v":
+            rospy.loginfo("Color-based detection")
             return self.color_based_detection(cv_image, depth_image, timestamp, camera_model, frame_id)
+
         else:
+            rospy.loginfo("YOLO-based detection")
             return self.yolo_based_detection(cv_image, depth_image, timestamp, camera_model, frame_id)
 
     def color_based_detection(self, cv_image, depth_image, timestamp, camera_model, frame_id):
@@ -251,17 +259,28 @@ class ObjectDetectionNode:
         """YOLO-based detection for other objects"""
         try:
             results = self.segmentation_model(cv_image)
-            rospy.loginfo(f"Detected objects: {results[0].names}")
-            
-            boxes = results[0].boxes.xywh.cpu().numpy()
-            
-
+            if not results:
+                rospy.logwarn("No detection results")
             classes = results[0].boxes.cls.cpu().numpy().astype(int)
             names = [results[0].names[i].lower() for i in classes]
-            rospy.loginfo(f"Detected objects: {names}")
-
             if self.active_goal not in names:
                 return False, 0, 0
+            
+            rospy.loginfo(f"Detected objects: {names}")
+
+            boxes = results[0].boxes.xywh.cpu().numpy()
+            if not boxes:
+                rospy.logwarn("No boxes detected")
+
+            rospy.loginfo(f"Detected boxes: {boxes}")
+
+            # for index, cls in enumerate(results[0].boxes.cls):
+            #     class_index = int(cls.cpu().numpy())
+            #     name = results[0].names[class_index]
+            #     mask = results[0].masks.data.cpu().numpy()[index, :, :].astype(int)
+            #     obj = depth[mask == 1]
+            #     obj = obj[~np.isnan(obj)]
+            #     avg_distance = np.mean(obj) if len(obj) else np.inf
 
             idx = names.index(self.active_goal)
             x_center, y_center, w, h = boxes[idx]
@@ -295,8 +314,8 @@ class ObjectDetectionNode:
         """Process YOLO detection results"""
         try:
             x, y = map(int, center)
-            if x and y:
-                rospy.loginfo(f"Detected object center: ({x}, {y})")
+            if not x and not y:
+                rospy.logwarn(f"Not detected object center")
             return self.calculate_3d_position((x, y), depth_image,
                                             timestamp, camera_model, frame_id)
         except Exception as e:
@@ -331,6 +350,7 @@ class ObjectDetectionNode:
 
             transformed = self.tf_buffer.transform(point_msg, "map", rospy.Duration(1.0))
             rospy.loginfo(f"Published object location from {frame_id} in map frame: ({transformed.point.x:.2f}, "f"{transformed.point.y:.2f}, {transformed.point.z:.2f})")
+            self.active_goal = None
             return True, transformed.point.x, transformed.point.y
 
         except (tf2_ros.TransformException, cv2.error) as e:
