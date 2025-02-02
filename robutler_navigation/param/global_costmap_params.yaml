@@ -8,8 +8,8 @@ global_costmap:
     - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
   
   inflation_layer:
-    inflation_radius: 0.2  # Buffer distance from obstacles (e.g., 0.5 meters)
-    cost_scaling_factor: 10.0
+    inflation_radius: 1.0  # Buffer distance from obstacles (e.g., 0.5 meters)
+    cost_scaling_factor: 3.0
 
   publish_frequency: 10.0
   transform_tolerance: 1.0

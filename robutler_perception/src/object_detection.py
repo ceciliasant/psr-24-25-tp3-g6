@@ -87,6 +87,8 @@ class ObjectDetectionNode:
 
     def detect_object_cb(self, goal):
         feedback = DetectObjectFeedback()
+
+        rate = rospy.Rate(10)
         
         try:
             self.active_goal = goal.object.lower()
@@ -100,6 +102,8 @@ class ObjectDetectionNode:
                 # image callbacks will doing their job
                 feedback.status = f"Scanning for {goal.object}..."
                 self.object_detect_server.publish_feedback(feedback) 
+
+                rate.sleep()
             
         finally:
             self.active_goal = None
@@ -271,6 +275,8 @@ class ObjectDetectionNode:
 
             classes = results[0].boxes.cls.cpu().numpy().astype(int)
             names = [results[0].names[i].lower() for i in classes]
+
+            rospy.loginfo(f"GOAL::{self.active_goal}")
             
             if self.active_goal not in names:
                 cv2.destroyAllWindows()

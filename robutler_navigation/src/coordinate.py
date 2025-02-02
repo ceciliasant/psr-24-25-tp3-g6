@@ -90,6 +90,7 @@ class CommonNavigator:
         """Callback function to handle incoming goals"""
         x = goal.x
         y = goal.y
+        yaw = goal.yaw
         
         rospy.loginfo(f"Received goal: x={x}, y={y}")
         
@@ -97,7 +98,7 @@ class CommonNavigator:
         result = CoordinateNavigationResult()
         
         try:
-            success = self.navigate_to(x, y)
+            success = self.navigate_to(x, y, yaw)
 
             if success:
                 result.success = True

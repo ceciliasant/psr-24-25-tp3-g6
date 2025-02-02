@@ -7,7 +7,7 @@ import actionlib
 from nav_msgs.msg import OccupancyGrid
 from robutler_navigation.msg import CoordinateNavigationGoal, CoordinateNavigationAction
 from robutler_perception.msg import FindObjectAction, FindObjectFeedback, FindObjectResult, DetectObjectAction, DetectObjectGoal
-
+import math
 class Explorer:
     def __init__(self):
         rospy.init_node('explorer')
@@ -32,21 +32,29 @@ class Explorer:
 
         self.map_subscriber = rospy.Subscriber('/map', OccupancyGrid, self.map_callback)
 
-        self.grid_step = rospy.get_param('~grid_step', 2.0) 
-        self.obstacle_threshold = rospy.get_param('~obstacle_threshold', 10)
-        self.buffer_distance = rospy.get_param('~buffer_distance', 0.2)  # Meters
+        self.grid_step = rospy.get_param('~grid_step', 1.5) 
+        self.obstacle_threshold = rospy.get_param('~obstacle_threshold', 5)
+        self.buffer_distance = rospy.get_param('~buffer_distance', 1.0)  # Meters
 
         self.current_waypoint_index = 0
 
         self.object_finder_server.start()
         rospy.wait_for_message('/map', OccupancyGrid)
 
+        self.current_pose = None
+
+    def calculate_yaw_to_target(self, current_x, current_y, target_x, target_y):
+        """Calculate the yaw angle to face the target point"""
+        dx = target_x - current_x
+        dy = target_y - current_y
+        return math.atan2(dy, dx)
+
     def find_object_cb(self, goal):
         feedback = FindObjectFeedback()
         result = FindObjectResult()
-        rate = rospy.Rate(1)
+        rate = rospy.Rate(10)
 
-        waypoints = self.generate_coverage_waypoints()
+        waypoints = self.generate_coverage_waypoints_v2()
 
         if not waypoints:
             feedback.status = "No free cells to explore."
@@ -91,11 +99,39 @@ class Explorer:
             if nav_state not in [actionlib.GoalStatus.PENDING, actionlib.GoalStatus.ACTIVE, actionlib.GoalStatus.PREEMPTING, actionlib.GoalStatus.RECALLING]:
                 if self.current_waypoint_index < len(waypoints):
                     next_waypoint = waypoints[self.current_waypoint_index]
-                    nav_goal = CoordinateNavigationGoal(x=next_waypoint[0], y=next_waypoint[1])
-                    self.navigation_client.send_goal(nav_goal)
-                    feedback.status = f"Navigating to waypoint {self.current_waypoint_index + 1}/{len(waypoints)}"
-                    self.object_finder_server.publish_feedback(feedback)
-                    self.current_waypoint_index += 1
+                    
+                    try:
+                        # Get current robot position from TF
+                        transform = self.tf_buffer.lookup_transform('map', 'base_link', rospy.Time(0))
+                        current_x = transform.transform.translation.x
+                        current_y = transform.transform.translation.y
+                        
+                        # Calculate desired yaw to face the next waypoint
+                        target_yaw = self.calculate_yaw_to_target(
+                            current_x, 
+                            current_y, 
+                            next_waypoint[0], 
+                            next_waypoint[1]
+                        )
+                        
+                        # Create quaternion for the desired orientation
+                        nav_goal = CoordinateNavigationGoal(
+                            x=next_waypoint[0], 
+                            y=next_waypoint[1],
+                            yaw=target_yaw  # Set the yaw to face the target
+                        )
+                        
+                        self.navigation_client.send_goal(nav_goal)
+                        feedback.status = f"Navigating to waypoint {self.current_waypoint_index + 1}/{len(waypoints)}"
+                        self.object_finder_server.publish_feedback(feedback)
+                        self.current_waypoint_index += 1
+                        
+                    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+                        rospy.logwarn(f"TF lookup failed: {str(e)}")
+                        # Fall back to waypoint without orientation if TF fails
+                        nav_goal = CoordinateNavigationGoal(x=next_waypoint[0], y=next_waypoint[1])
+                        self.navigation_client.send_goal(nav_goal)
+                
                 else:
                     rospy.loginfo("All waypoints visited.")
                     feedback.status = "All waypoints visited. Object not found."
@@ -138,6 +174,75 @@ class Explorer:
         except Exception as e:
             rospy.logwarn(f"Waypoint validation failed: {str(e)}")
             return False
+        
+    def generate_coverage_waypoints_v2(self):
+        """Generate optimal spiral coverage path for a fully known map"""
+        waypoints = []
+        
+        # Get all free cells (value 0)
+        free_cells = np.argwhere(self.map_data == 0)
+        if free_cells.size == 0:
+            return []
+
+        # Convert map origin to world coordinates
+        origin_x = self.map_origin.position.x
+        origin_y = self.map_origin.position.y
+
+        # Calculate spiral parameters
+        grid_size = self.grid_step  # Should match robot's coverage width
+        spiral_gap = grid_size * 1.2  # Slightly overlapping spiral arms
+        
+        # Find bounding box of free space
+        min_y, min_x = free_cells.min(axis=0)
+        max_y, max_x = free_cells.max(axis=0)
+        
+        # Calculate spiral center (map coordinates)
+        center_x = (min_x + max_x) // 2
+        center_y = (min_y + max_y) // 2
+        
+        # Convert center to world coordinates
+        spiral_center = (
+            origin_x + (center_x * self.map_resolution),
+            origin_y + (center_y * self.map_resolution)
+        )
+
+        # Calculate maximum spiral radius needed
+        max_distance = max(
+            np.sqrt((center_x - min_x)**2 + (center_y - min_y)**2),
+            np.sqrt((center_x - max_x)**2 + (center_y - max_y)**2)
+        )
+        max_radius = max_distance * self.map_resolution * 1.2  # Add margin
+
+        # Generate Archimedean spiral waypoints
+        a = 0  # Starting radius
+        b = spiral_gap / (2 * np.pi)  # Gap between successive turns
+        theta = 0.0
+        last_valid = None
+        
+        while theta < 50:  # Safety limit for theta
+            radius = a + b * theta
+            if radius > max_radius:
+                break
+                
+            # Calculate world coordinates
+            x = spiral_center[0] + radius * np.cos(theta)
+            y = spiral_center[1] + radius * np.sin(theta)
+            
+            # Check validity with footprint clearance
+            if self.is_valid_waypoint(x, y):
+                # Add waypoint if significantly different from last
+                if not last_valid or self.distance(last_valid, (x,y)) > grid_size/2:
+                    waypoints.append((x, y))
+                    last_valid = (x, y)
+            
+            theta += 0.1  # Determines spiral density
+
+        rospy.loginfo(f"Generated {len(waypoints)} spiral waypoints for full coverage")
+        return waypoints
+
+    def distance(self, p1, p2):
+        """Helper for Euclidean distance calculation"""
+        return np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
     
     def generate_coverage_waypoints(self):
         """Generate coverage path within discovered free space"""

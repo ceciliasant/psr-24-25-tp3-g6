@@ -1,6 +1,7 @@
 # Goal: The input sent from the client to the server
 float64 x
 float64 y
+float64 yaw
 ---
 # Result: The output sent from the server to the client
 bool success
