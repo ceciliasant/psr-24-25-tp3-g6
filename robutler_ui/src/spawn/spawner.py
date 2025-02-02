@@ -22,7 +22,7 @@ def spawn_object(model=None, place=None, random_spawn=False):
     placements = []
     placements.append({'pose':Pose(position=Point(x=-6.0, y=2.0, z=0.645395),orientation=Quaternion(x=0,y=0,z=0,w=1)), 'place':'on_bed'})
     placements.append({'pose':Pose(position=Point(x=-8.821895, y=1.601198, z=0.744581),orientation=Quaternion(x=0,y=0,z=0,w=1)), 'place':'on_desk'})
-    placements.append({'pose':Pose(position=Point(x=8.497470, y=2.111340, z=0),orientation=Quaternion(x=0,y=0,z=0,w=1)), 'place':'near_dining_table'})
+    placements.append({'pose':Pose(position=Point(x=5.873740, y=0.457574, z=0),orientation=Quaternion(x=0,y=0,z=0,w=1)), 'place':'near_dining_table'})
     placements.append({'pose':Pose(position=Point(x=2.870240, y=-2.654860, z=0),orientation=Quaternion(x=0,y=0,z=0,w=1)), 'place':'near_sofa'})
     placements.append({'pose':Pose(position=Point(x=-7.684700, y=-3.801500, z=0),orientation=Quaternion(x=0,y=0,z=0,w=1)), 'place':'near_ball_and_chair'})
     placements.append({'pose':Pose(position=Point(x=-2.369610, y=-0.200006, z=0),orientation=Quaternion(x=0,y=0,z=0,w=1)), 'place':'in_entryway_bedroom'})
