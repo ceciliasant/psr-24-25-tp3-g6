@@ -48,8 +48,8 @@ class RobutlerUI(QMainWindow):
         
         self.locations = self.load_semantic_locations()
         
-        self.model_names = ['sphere_v', 'bottle_white_wine', 'human_female_1', 'laptop_pc_1']
-        self.placements = ['on_bed','on_desk','near_dining_table','near_sofa','near_ball_and_chair']
+        self.model_names = ['sphere_v', 'bottle_white_wine', 'human_female_1', 'laptop_pc_1','sphere_g']
+        self.placements = ['on_bed','on_desk','near_dining_table','near_sofa','near_ball_and_chair','in_entryway_bedroom']
         
         self.init_ui()
 

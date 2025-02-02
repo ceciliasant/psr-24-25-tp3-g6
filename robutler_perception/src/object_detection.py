@@ -44,7 +44,12 @@ class ObjectDetectionNode:
                 'upper': np.array([150, 255, 255]),
                 'min_area': 300,
                 'circularity': 0.7
-            }
+            },
+            'green': {
+                'lower': np.array([40, 50, 0]),
+                'upper': np.array([80, 255, 255]),
+                'min_area': 300,
+                'circularity': 0.7}
         }
 
         # Action server
@@ -225,11 +230,42 @@ class ObjectDetectionNode:
         if self.active_goal == "sphere_v":
             rospy.loginfo("Color-based detection")
             return self.color_based_detection(cv_image, depth_image, timestamp, camera_model, frame_id)
-
+        if self.active_goal == "sphere_g":
+            rospy.loginfo("Color-based detection")
+            return self.color_based_detection_green(cv_image, depth_image, timestamp, camera_model, frame_id)
         else:
             rospy.loginfo("YOLO-based detection")
             return self.yolo_based_detection(cv_image, depth_image, timestamp, camera_model, frame_id)
 
+    def color_based_detection_green(self, cv_image, depth_image, timestamp, camera_model, frame_id):
+        """Color-based detection for green spheres"""
+        mask = None
+        try:
+            hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
+
+        except cv2.error as e:
+            rospy.logerr(f"Failed to convert to HSV: {e}")
+            return False, 0, 0
+         
+        mask = cv2.inRange(hsv_image, 
+                            self.color_params['green']['lower'],
+                            self.color_params['green']['upper'])
+            
+        # Morphological operations
+        kernel = np.ones((5,5), np.uint8)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+            
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        if not contours:
+            return False, 0, 0
+            
+        # Process largest contour
+        largest_contour = max(contours, key=cv2.contourArea)
+        return self.process_contour(largest_contour, depth_image, 
+                                    timestamp, camera_model, frame_id)
+    
     def color_based_detection(self, cv_image, depth_image, timestamp, camera_model, frame_id):
         """Color-based detection for violet spheres"""
         mask = None
@@ -279,7 +315,6 @@ class ObjectDetectionNode:
             rospy.loginfo(f"GOAL::{self.active_goal}")
             
             if self.active_goal not in names:
-                cv2.destroyAllWindows()
                 return False, 0, 0
             if names:
                 rospy.loginfo(f"Detected objects: {names}")

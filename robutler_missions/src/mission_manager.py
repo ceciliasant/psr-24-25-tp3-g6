@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
 import rospy
+import re
 import actionlib
 from visualization_msgs.msg import Marker, InteractiveMarker, InteractiveMarkerControl, InteractiveMarkerFeedback
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from geometry_msgs.msg import Point, Pose
-from robutler_navigation.msg import SemanticNavigationAction, SemanticNavigationGoal
+from robutler_navigation.msg import SemanticNavigationAction, SemanticNavigationGoal, CoordinateNavigationAction, CoordinateNavigationGoal
 from robutler_perception.msg import FindObjectGoal, FindObjectAction
 from geometry_msgs.msg import Twist
 
@@ -21,6 +22,9 @@ class MissionManager:
 
         self.finder_client = actionlib.SimpleActionClient('object_finder', FindObjectAction)
         self.finder_client.wait_for_server()
+
+        self.coordinate_client = actionlib.SimpleActionClient('coordinate_navigation', CoordinateNavigationAction)
+        self.coordinate_client.wait_for_server()
         
         # current mission and status
         self.current_mission = None
@@ -37,11 +41,6 @@ class MissionManager:
         # markers initialisation
         self.create_mission_marker()
         self.create_mission_text_marker()
-
-        # # pushing sphere
-        # self.cmd_vel_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-        # self.push_distance = 0.5  # meters to push
-        # self.push_speed = 0.1     # m/s
 
     def create_mission_marker(self):
         int_marker = InteractiveMarker()
@@ -136,7 +135,7 @@ class MissionManager:
         menu_handler.insert("Find Person", callback=self.process_feedback)
         menu_handler.insert("Find Laptop", callback=self.process_feedback)
         menu_handler.insert("Find Bottle", callback=self.process_feedback)
-        # menu_handler.insert("Push Violet Sphere", callback=self.process_feedback)
+        menu_handler.insert("Bump Green Sphere", callback=self.process_feedback)
 
         return menu_handler
 
@@ -165,8 +164,8 @@ class MissionManager:
             5: self.find_sphere_v,
             6: self.find_person,
             7: self.find_laptop,
-            8: self.find_bottle
-            # 9: self.push_sphere_v
+            8: self.find_bottle,
+            9: self.bump_sphere_g
         }
         
         if mission_id in missions:
@@ -184,6 +183,13 @@ class MissionManager:
         goal.object = object_name
         rospy.loginfo(f"Trying to find {object_name}...")
         self.finder_client.send_goal(goal, done_cb=self.done_callback)
+
+    def move_to_position(self, x, y):
+        goal = CoordinateNavigationGoal()
+        goal.x = x
+        goal.y = y
+        rospy.loginfo(f"Sending goal to navigate to ({x}, {y})...")
+        self.coordinate_client.send_goal(goal, done_cb=self.done_callback)
 
     # Mission implementations
     def move_to_bedroom(self):
@@ -218,23 +224,28 @@ class MissionManager:
         self.find_object("bottle")
         self.update_status_text("Trying to find a bottle")
 
-    # def push_sphere_v(self, x, y):
-    #     # Calculate push direction (simplified straight push)
-    #     push_cmd = Twist()
-    #     push_cmd.linear.x = self.push_speed
+    def bump_sphere_g(self):
+        goal = FindObjectGoal()
+        goal.object = "sphere_g"
         
-    #     # Push for time = distance/speed
-    #     push_duration = self.push_distance / self.push_speed
-    #     start_time = rospy.Time.now()
+        rospy.loginfo("Sending goal to find the Green Sphere...")
+        self.finder_client.send_goal(goal)
         
-    #     while (rospy.Time.now() - start_time).to_sec() < push_duration:
-    #         self.cmd_vel_pub.publish(push_cmd)
-    #         rospy.sleep(0.1)
-            
-    #     # Stop
-    #     self.cmd_vel_pub.publish(Twist())
-    #     self.update_status_text("Push Complete")
+        self.finder_client.wait_for_result()
+        result = self.finder_client.get_result()
 
+        detected = result.success
+        message = result.message  # Assuming message contains object coordinates or status
+        match = re.search(r'\((-?\d+\.\d+),\s*(-?\d+\.\d+)\)', message)
+        if detected:
+            rospy.loginfo(f"Object found: {message}")
+            x, y = float(match.group(1)), float(match.group(2))
+
+            self.update_status_text(f"Green Sphere Detected. {message}. Moving to bump into it.")
+            self.move_to_position(x,y)
+        else:
+            rospy.logwarn("Green Sphere not found.")
+            
     def run(self):
         rate = rospy.Rate(10)  # 10 Hz
         while not rospy.is_shutdown():
