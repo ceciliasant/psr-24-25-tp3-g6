@@ -8,6 +8,11 @@ from nav_msgs.msg import OccupancyGrid
 from robutler_navigation.msg import CoordinateNavigationGoal, CoordinateNavigationAction
 from robutler_perception.msg import FindObjectAction, FindObjectFeedback, FindObjectResult, DetectObjectAction, DetectObjectGoal
 import math
+from visualization_msgs.msg import Marker, MarkerArray
+from geometry_msgs.msg import Point
+from std_msgs.msg import ColorRGBA
+
+
 class Explorer:
     def __init__(self):
         rospy.init_node('explorer')
@@ -32,9 +37,9 @@ class Explorer:
 
         self.map_subscriber = rospy.Subscriber('/map', OccupancyGrid, self.map_callback)
 
-        self.grid_step = rospy.get_param('~grid_step', 1.5) 
+        self.grid_step = rospy.get_param('~grid_step', 1.7) 
         self.obstacle_threshold = rospy.get_param('~obstacle_threshold', 5)
-        self.buffer_distance = rospy.get_param('~buffer_distance', 1.0)  # Meters
+        self.buffer_distance = rospy.get_param('~buffer_distance', 0.8)  # Meters
 
         self.current_waypoint_index = 0
 
@@ -42,6 +47,51 @@ class Explorer:
         rospy.wait_for_message('/map', OccupancyGrid)
 
         self.current_pose = None
+
+        self.marker_pub = rospy.Publisher('/waypoint_markers', MarkerArray, queue_size=10)
+
+
+    def visualize_waypoints(self, waypoints, frame_id="map"):
+        marker_array = MarkerArray()
+        
+        # Create points marker
+        points_marker = Marker()
+        points_marker.header.frame_id = frame_id
+        points_marker.header.stamp = rospy.Time.now()
+        points_marker.ns = "waypoints"
+        points_marker.id = 0
+        points_marker.type = Marker.SPHERE_LIST
+        points_marker.action = Marker.ADD
+        points_marker.pose.orientation.w = 1.0
+        points_marker.scale.x = 0.2  # Point size
+        points_marker.scale.y = 0.2
+        points_marker.scale.z = 0.2
+        points_marker.color = ColorRGBA(r=0.0, g=1.0, b=0.0, a=1.0)  # Green color
+        
+        # Create line strip marker
+        line_marker = Marker()
+        line_marker.header.frame_id = frame_id
+        line_marker.header.stamp = rospy.Time.now()
+        line_marker.ns = "waypoint_path"
+        line_marker.id = 1
+        line_marker.type = Marker.LINE_STRIP
+        line_marker.action = Marker.ADD
+        line_marker.pose.orientation.w = 1.0
+        line_marker.scale.x = 0.05  # Line width
+        line_marker.color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=0.7)  # Red color
+        
+        # Add points to both markers
+        for x, y in waypoints:
+            point = Point()
+            point.x = x
+            point.y = y
+            point.z = 0.1  # Slightly above ground
+            
+            points_marker.points.append(point)
+            line_marker.points.append(point)
+        
+        marker_array.markers = [points_marker, line_marker]
+        self.marker_pub.publish(marker_array)
 
     def calculate_yaw_to_target(self, current_x, current_y, target_x, target_y):
         """Calculate the yaw angle to face the target point"""
@@ -235,9 +285,12 @@ class Explorer:
                     waypoints.append((x, y))
                     last_valid = (x, y)
             
-            theta += 0.1  # Determines spiral density
+            theta += 0.05  # Determines spiral density
 
         rospy.loginfo(f"Generated {len(waypoints)} spiral waypoints for full coverage")
+
+        self.visualize_waypoints(waypoints)
+
         return waypoints
 
     def distance(self, p1, p2):
